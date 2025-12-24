@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Oudience — Fast Chat</title>
+
+<style>
+  :root{
+    --bg:#f4f6fb;
+    --card:#ffffff;
+    --accent:#0b77ff;
+    --text:#111;
+    --muted:#666;
+  }
+  body.dark {
+    --bg:#0b0f14;
+    --card:#0f1720;
+    --accent:#2f9bff;
+    --text:#e6eef8;
+    --muted:#9aa6b2;
+  }
+
+  html,body{
+    height:100%;
+    margin:0;
+    font-family:Inter,Segoe UI,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text)
+  }
+
+  .app{
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    max-width:900px;
+    margin:0 auto
+  }
+
+  header{
+    padding:12px 16px;
+    background:var(--card);
+    box-shadow:0 1px 0 rgba(0,0,0,.04);
+    display:flex;
+    justify-content:space-between;
+    align-items:center
+  }
+
+  .header-actions{
+    display:flex;
+    gap:8px;
+    align-items:center
+  }
+
+  .icon-btn{
+    border:none;
+    background:transparent;
+    cursor:pointer;
+    font-size:18px
+  }
+
+  #chat{
+    flex:1;
+    overflow:auto;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:10px
+  }
+
+  .msg{
+    max-width:78%;
+    padding:12px 14px;
+    border-radius:12px;
+    line-height:1.4
+  }
+
+  .user{
+    align-self:flex-end;
+    background:var(--accent);
+    color:white;
+    border-bottom-right-radius:4px
+  }
+
+  .bot{
+    align-self:flex-start;
+    background:var(--card);
+    border-bottom-left-radius:4px;
+    box-shadow:0 1px 0 rgba(0,0,0,.04)
+  }
+
+  .composer{
+    display:flex;
+    gap:8px;
+    padding:12px;
+    background:var(--card);
+    box-shadow:0 -1px 0 rgba(0,0,0,.04)
+  }
+
+  .input{
+    flex:1;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid rgba(0,0,0,.06);
+    font-size:15px
+  }
+
+  .btn{
+    padding:10px 14px;
+    border-radius:8px;
+    border:none;
+    background:var(--accent);
+    color:white;
+    cursor:pointer
+  }
+
+  /* Multi-question highlight */
+  .answer-block{
+    border-left:4px solid var(--accent);
+    padding:10px 12px;
+    margin-top:8px;
+    border-radius:6px;
+    background:rgba(0,0,0,0.03)
+  }
+
+  body.dark .answer-block{
+    background:rgba(255,255,255,0.05)
+  }
+
+  .answer-title{
+    font-weight:600;
+    color:var(--accent);
+    margin-bottom:4px
+  }
+</style>
+</head>
+
+<body>
+
+<div class="app">
+  <header>
+    <strong>Oudience — Fast Chat</strong>
+
+    <div class="header-actions">
+      <!-- 🔊 Voice Toggle Button -->
+      <button id="voiceBtn" class="icon-btn" title="Toggle voice">🔇</button>
+      <button onclick="toggleDark()" class="icon-btn">🌙</button>
+    </div>
+  </header>
+
+  <main id="chat"></main>
+
+  <div class="composer">
+    <input id="input" class="input" placeholder="Ask a question..." />
+    <button id="sendBtn" class="btn">Send</button>
+  </div>
+</div>
+
+<script>
+const input = document.getElementById("input");
+const chat = document.getElementById("chat");
+const sendBtn = document.getElementById("sendBtn");
+const voiceBtn = document.getElementById("voiceBtn");
+
+let sessionId = localStorage.getItem("session_id") || "";
+let voiceEnabled = false;
+
+/* Theme */
+function toggleDark(){
+  document.body.classList.toggle("dark");
+  localStorage.setItem("dark", document.body.classList.contains("dark"));
+}
+if(localStorage.getItem("dark")==="true"){
+  document.body.classList.add("dark");
+}
+
+/* 🔊 Voice Toggle */
+voiceBtn.onclick = () => {
+  voiceEnabled = !voiceEnabled;
+  voiceBtn.textContent = voiceEnabled ? "🔊" : "🔇";
+  if (!voiceEnabled) window.speechSynthesis.cancel();
+};
+
+/* 🔊 Speak text */
+function speak(text){
+  if(!voiceEnabled) return;
+  if(!("speechSynthesis" in window)) return;
+
+  window.speechSynthesis.cancel();
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 1;
+  utter.pitch = 1;
+  utter.lang = "en-US";
+  window.speechSynthesis.speak(utter);
+}
+
+/* Add chat bubble */
+function addBubble(text, who="bot"){
+  const el = document.createElement("div");
+  el.className = "msg " + (who==="user" ? "user" : "bot");
+
+  if(who==="bot"){
+    const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+    const numbered = lines.filter(l => /^\d+\.\s+/.test(l));
+
+    if(numbered.length >= 2){
+      let speechText = "";
+      numbered.forEach(line=>{
+        const match = line.match(/^(\d+)\.\s+(.*)/);
+        if(match){
+          const block = document.createElement("div");
+          block.className = "answer-block";
+
+          const title = document.createElement("div");
+          title.className = "answer-title";
+          title.textContent = `Answer ${match[1]}`;
+
+          const body = document.createElement("div");
+          body.textContent = match[2];
+
+          speechText += match[2] + ". ";
+
+          block.appendChild(title);
+          block.appendChild(body);
+          el.appendChild(block);
+        }
+      });
+      speak(speechText);
+    } else {
+      el.textContent = text;
+      speak(text);
+    }
+  } else {
+    el.textContent = text;
+  }
+
+  chat.appendChild(el);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+/* Send message */
+async function sendMessage(){
+  const msg = input.value.trim();
+  if(!msg) return;
+  input.value = "";
+
+  addBubble(msg,"user");
+
+  try{
+    const res = await fetch("/query",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ query:msg, session_id:sessionId })
+    });
+
+    const data = await res.json();
+    sessionId = data.session_id || sessionId;
+    localStorage.setItem("session_id",sessionId);
+
+    addBubble(data.response || "No response.","bot");
+  }catch{
+    addBubble("Server error.","bot");
+  }
+}
+
+sendBtn.onclick = sendMessage;
+input.onkeydown = e => {
+  if(e.key==="Enter"){ e.preventDefault(); sendMessage(); }
+};
+
+/* Welcome */
+window.onload = ()=>{
+  if(chat.children.length===0){
+    addBubble("Hello! You can ask one or multiple questions in a single message.","bot");
+  }
+};
+</script>
+
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Oudience Admin Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f4f4f4;
+        transition: background 0.3s, color 0.3s;
+    }
+    body.dark {
+        background: #111;
+        color: #eee;
+    }
+
+    header {
+        background: #007aff;
+        color: white;
+        padding: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    #container {
+        padding: 20px;
+    }
+
+    .card {
+        background: white;
+        padding: 20px;
+        margin-bottom: 25px;
+        border-radius: 10px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    body.dark .card {
+        background: #222;
+        color: #ddd;
+        box-shadow: 0 3px 10px rgba(255,255,255,0.05);
+    }
+
+    h2 {
+        margin-top: 0;
+    }
+
+    input, button {
+        padding: 10px;
+        font-size: 16px;
+    }
+
+    button {
+        background: #007aff;
+        border: none;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        opacity: 0.85;
+    }
+
+    #stats p {
+        font-size: 18px;
+        margin: 6px 0;
+    }
+
+    /* Upload area */
+    #upload-area {
+        border: 2px dashed #999;
+        padding: 25px;
+        text-align: center;
+        border-radius: 10px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    body.dark #upload-area {
+        border-color: #aaa;
+    }
+
+    #upload-area:hover {
+        background: rgba(0,0,0,0.03);
+    }
+
+    /* PDF list */
+    .pdf-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #ddd;
+        font-size: 14px;
+    }
+    body.dark .pdf-item {
+        border-color: #444;
+    }
+
+    .pdf-item:last-child {
+        border-bottom: none;
+    }
+
+    .delete-btn {
+        background: #ff3b30;
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+
+    pre {
+        background: #eee;
+        padding: 12px;
+        border-radius: 6px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-size: 13px;
+    }
+    body.dark pre {
+        background: #333;
+        color: #eee;
+    }
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Oudience Admin Dashboard</h1>
+    <button onclick="toggleDark()">🌙</button>
+</header>
+
+<div id="container">
+
+    <!-- Upload -->
+    <div class="card">
+        <h2>📄 Upload FAQ / Documentation</h2>
+
+        <div id="upload-area" onclick="document.getElementById('file-input').click()">
+            Click to upload <strong>.pdf</strong>, .txt or .md files<br>
+            <small>(PDF up to 20 MB)</small>
+        </div>
+
+        <input
+            id="file-input"
+            type="file"
+            accept=".pdf,.txt,.md"
+            style="display:none"
+            onchange="uploadFile()"
+        >
+
+        <p id="upload-status"></p>
+    </div>
+
+    <!-- Uploaded PDFs -->
+    <div class="card">
+        <h2>📁 Uploaded PDFs</h2>
+        <button onclick="loadPDFs()">Refresh List</button>
+        <div id="pdf-list" style="margin-top:12px;">No PDFs loaded</div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="card">
+        <h2>📊 Analytics Overview</h2>
+        <div id="stats">
+            <p>Total Messages: <strong id="total-msg">-</strong></p>
+            <p>Refund Queries: <strong id="refund-count">-</strong></p>
+            <p>Total Feedback: <strong id="fb-count">-</strong></p>
+            <p>Ratings Breakdown:</p>
+            <pre id="ratings"></pre>
+        </div>
+        <button onclick="loadAnalytics()">Refresh Analytics</button>
+    </div>
+
+    <!-- Feedback -->
+    <div class="card">
+        <h2>⭐ Feedback Records</h2>
+        <button onclick="loadFeedback()">Load Feedback</button>
+        <pre id="feedback-box"></pre>
+    </div>
+
+    <!-- Logs -->
+    <div class="card">
+        <h2>💬 Conversation Logs (Latest 100)</h2>
+        <button onclick="loadLogs()">Load Logs</button>
+        <pre id="logs-box"></pre>
+    </div>
+
+</div>
+
+<script>
+/* -------------------- Theme -------------------- */
+function toggleDark() {
+    document.body.classList.toggle("dark");
+    localStorage.setItem("dark", document.body.classList.contains("dark"));
+}
+if (localStorage.getItem("dark") === "true") {
+    document.body.classList.add("dark");
+}
+
+/* -------------------- Upload -------------------- */
+function uploadFile() {
+    const input = document.getElementById("file-input");
+    const file = input.files[0];
+    if (!file) return;
+
+    const status = document.getElementById("upload-status");
+
+    if (file.size > 20 * 1024 * 1024) {
+        status.innerText = "❌ File too large (max 20 MB)";
+        input.value = "";
+        return;
+    }
+
+    const form = new FormData();
+    form.append("file", file);
+
+    status.innerText = "Uploading...";
+
+    fetch("/admin/upload", {
+        method: "POST",
+        body: form
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.error) {
+            status.innerText = "❌ " + d.error;
+        } else {
+            status.innerText =
+                "✅ Uploaded successfully — chunks added: " + d.chunks_added;
+            loadPDFs();
+        }
+        input.value = "";
+    })
+    .catch(() => {
+        status.innerText = "❌ Upload failed";
+        input.value = "";
+    });
+}
+
+/* -------------------- Load PDFs -------------------- */
+function loadPDFs() {
+    fetch("/admin/pdfs")
+        .then(r => r.json())
+        .then(list => {
+            const box = document.getElementById("pdf-list");
+            box.innerHTML = "";
+
+            if (!list.length) {
+                box.innerText = "No PDFs uploaded yet.";
+                return;
+            }
+
+            list.forEach(p => {
+                const row = document.createElement("div");
+                row.className = "pdf-item";
+
+                row.innerHTML = `
+                    <span>📄 ${p.name} (${p.size_kb} KB)</span>
+                    <button class="delete-btn" onclick="deletePDF('${p.name}')">Delete</button>
+                `;
+                box.appendChild(row);
+            });
+        });
+}
+
+/* -------------------- Delete PDF -------------------- */
+function deletePDF(name) {
+    if (!confirm(`Delete ${name}?\nThis will also remove it from the knowledge base.`))
+        return;
+
+    fetch("/admin/pdfs/" + encodeURIComponent(name), {
+        method: "DELETE"
+    })
+    .then(r => r.json())
+    .then(() => loadPDFs());
+}
+
+/* -------------------- Analytics -------------------- */
+function loadAnalytics() {
+    fetch("/admin/analytics")
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById("total-msg").innerText = d.total_messages;
+            document.getElementById("refund-count").innerText = d.refund_queries;
+            document.getElementById("fb-count").innerText = d.feedback_count;
+            document.getElementById("ratings").innerText =
+                JSON.stringify(d.ratings, null, 2);
+        });
+}
+
+/* -------------------- Feedback -------------------- */
+function loadFeedback() {
+    fetch("/admin/analytics")
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById("feedback-box").innerText =
+                "Feedback count: " + d.feedback_count +
+                "\n\nRatings Breakdown:\n" +
+                JSON.stringify(d.ratings, null, 2);
+        });
+}
+
+/* -------------------- Logs -------------------- */
+function loadLogs() {
+    fetch("/logs")
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById("logs-box").innerText =
+                JSON.stringify(d, null, 2);
+        });
+}
+
+/* Auto-load PDFs on open */
+window.onload = loadPDFs;
+</script>
+
+</body>
+</html>
