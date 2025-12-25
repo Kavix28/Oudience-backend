@@ -1,0 +1,7 @@
+Flask
+Flask-Session
+flask-cors
+PyPDF2
+sentence-transformers
+numpy
+requests
