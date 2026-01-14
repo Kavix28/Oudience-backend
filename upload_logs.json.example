@@ -1,0 +1,10 @@
+[
+  {
+    "filename": "example.pdf",
+    "original_filename": "example.pdf",
+    "chunks": 5,
+    "file_size": 245760,
+    "uploaded_at": "2026-01-14 10:00:00",
+    "pages_processed": 10
+  }
+]

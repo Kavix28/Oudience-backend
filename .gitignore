@@ -1,13 +1,65 @@
-# Runtime / generated data
-flask_session/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Flask
+instance/
+.webassets-cache
 flask_sessions/
-uploads/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
 analytics.db
 
-# Python cache
-__pycache__/
-*.pyc
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
+
+# Project Specific
+uploads_exp/*.pdf
+knowledge_base_exp.json
+upload_logs.json
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.bak

@@ -1,0 +1,8 @@
+What payment methods are supported?
+We support UPI, Credit Cards, Debit Cards, and Net Banking.
+
+How long does delivery take?
+Delivery usually takes 3 to 5 business days.
+
+Do you support cash on delivery?
+Yes, cash on delivery is available in selected locations.
