@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Oudience Admin Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --secondary: #64748b;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --bg-light: #f8fafc;
+  --bg-white: #ffffff;
+  --text-dark: #1e293b;
+  --text-light: #64748b;
+  --border: #e2e8f0;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --radius: 12px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-light);
+  color: var(--text-dark);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  padding: 2rem 0;
+  margin-bottom: 2rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+/* Cards */
+.card {
+  background: var(--bg-white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.card-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Upload Area */
+.upload-area {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 3rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.upload-area:hover {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.upload-area.dragover {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  transform: scale(1.02);
+}
+
+.upload-icon {
+  font-size: 3rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.upload-text {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.upload-subtext {
+  color: var(--text-light);
+  font-size: 0.875rem;
+}
+
+/* Progress Bar */
+.progress-container {
+  margin-top: 1rem;
+  display: none;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--success));
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-light);
+  text-align: center;
+}
+
+/* Status Messages */
+.status {
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-top: 1rem;
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.status.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.status.loading {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.status.warning {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+/* Search & Filter */
+.controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+.filter-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+}
+
+/* PDF List */
+.pdf-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.pdf-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--bg-light);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.pdf-item:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+
+.pdf-item.large-file {
+  border-left: 4px solid var(--warning);
+}
+
+.pdf-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.pdf-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.pdf-details h4 {
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 0.25rem;
+}
+
+.pdf-meta {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pdf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-white);
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.pdf-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+/* Stats */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--bg-white);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: white;
+}
+
+.stat-icon.primary { background: var(--primary); }
+.stat-icon.success { background: var(--success); }
+.stat-icon.warning { background: var(--warning); }
+.stat-icon.danger { background: var(--danger); }
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  color: var(--text-light);
+  font-size: 0.875rem;
+}
+
+/* Loading Spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-light);
+}
+
+.empty-state i {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* Health Warning */
+.health-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.health-warning i {
+  color: var(--warning);
+  font-size: 1.5rem;
+}
+
+.health-warning-content h4 {
+  color: #92400e;
+  margin-bottom: 0.25rem;
+}
+
+.health-warning-content p {
+  color: #78350f;
+  font-size: 0.875rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .pdf-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .pdf-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .controls {
+    flex-direction: column;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<script>
+(async () => {
+  const token = prompt("🔐 Enter admin token to access dashboard:");
+  if (!token) {
+    location.href = "/";
+    return;
+  }
+
+  try {
+    const response = await fetch("/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ token })
+    });
+
+    if (!response.ok) {
+      alert("❌ Invalid admin token");
+      location.href = "/";
+    }
+  } catch (error) {
+    alert("❌ Connection error");
+    location.href = "/";
+  }
+})();
+</script>
+
+<div class="container">
+  <header class="header">
+    <div class="header-content">
+      <h1>
+        <i class="fas fa-cog"></i>
+        Admin Dashboard
+      </h1>
+      <div class="header-actions">
+        <a href="/" class="btn btn-secondary">
+          <i class="fas fa-comments"></i>
+          View Chat
+        </a>
+        <button onclick="refreshData()" class="btn btn-secondary">
+          <i class="fas fa-sync-alt"></i>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Health Warning -->
+  <div class="health-warning" id="healthWarning">
+    <i class="fas fa-exclamation-triangle"></i>
+    <div class="health-warning-content">
+      <h4>Knowledge Base Approaching Capacity</h4>
+      <p id="healthWarningText"></p>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-icon primary">
+        <i class="fas fa-file-pdf"></i>
+      </div>
+      <div class="stat-value" id="totalPdfs">0</div>
+      <div class="stat-label">Total PDFs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon success">
+        <i class="fas fa-puzzle-piece"></i>
+      </div>
+      <div class="stat-value" id="totalChunks">0</div>
+      <div class="stat-label">Knowledge Chunks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon warning">
+        <i class="fas fa-database"></i>
+      </div>
+      <div class="stat-value" id="totalSize">0 MB</div>
+      <div class="stat-label">Total Storage</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" id="healthIcon">
+        <i class="fas fa-heart-pulse"></i>
+      </div>
+      <div class="stat-value" id="healthStatus">Healthy</div>
+      <div class="stat-label">System Health</div>
+    </div>
+  </div>
+
+  <!-- Upload Section -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <i class="fas fa-cloud-upload-alt"></i>
+        Upload Knowledge Base Documents
+      </h2>
+    </div>
+    <div class="card-body">
+      <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">
+          <i class="fas fa-file-pdf"></i>
+        </div>
+        <div class="upload-text">Click to upload PDF documents</div>
+        <div class="upload-subtext">Or drag and drop files here • PDF files only • Max 10MB per file</div>
+      </div>
+      <input id="fileInput" type="file" accept=".pdf" multiple hidden onchange="handleFileUpload()">
+      
+      <div class="progress-container" id="progressContainer">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">Processing...</div>
+      </div>
+      
+      <div id="uploadStatus" class="status">
+        <i class="fas fa-spinner spinner"></i>
+        <span>Processing upload...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Management -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <i class="fas fa-folder-open"></i>
+        Uploaded Documents
+      </h2>
+    </div>
+    <div class="card-body">
+      <div class="controls">
+        <input 
+          type="text" 
+          class="search-box" 
+          id="searchBox" 
+          placeholder="🔍 Search documents..."
+          onkeyup="filterDocuments()"
+        >
+        <select class="filter-select" id="sortSelect" onchange="sortDocuments()">
+          <option value="date-desc">Latest First</option>
+          <option value="date-asc">Oldest First</option>
+          <option value="name-asc">Name (A-Z)</option>
+          <option value="name-desc">Name (Z-A)</option>
+          <option value="size-desc">Largest First</option>
+          <option value="size-asc">Smallest First</option>
+          <option value="chunks-desc">Most Chunks</option>
+          <option value="chunks-asc">Least Chunks</option>
+        </select>
+      </div>
+      
+      <div id="pdfList" class="pdf-list">
+        <div class="empty-state">
+          <i class="fas fa-file-pdf"></i>
+          <p>No documents uploaded yet</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let uploadedFiles = [];
+let currentSort = 'date-desc';
+
+// Drag and drop functionality
+const uploadArea = document.querySelector('.upload-area');
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+  uploadArea.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+  uploadArea.addEventListener(eventName, highlight, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+  uploadArea.addEventListener(eventName, unhighlight, false);
+});
+
+function highlight(e) {
+  uploadArea.classList.add('dragover');
+}
+
+function unhighlight(e) {
+  uploadArea.classList.remove('dragover');
+}
+
+uploadArea.addEventListener('drop', handleDrop, false);
+
+function handleDrop(e) {
+  const dt = e.dataTransfer;
+  const files = dt.files;
+  document.getElementById('fileInput').files = files;
+  handleFileUpload();
+}
+
+// File upload handling
+async function handleFileUpload() {
+  const fileInput = document.getElementById('fileInput');
+  const files = fileInput.files;
+  
+  if (!files.length) return;
+
+  const progressContainer = document.getElementById('progressContainer');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+  const statusDiv = document.getElementById('uploadStatus');
+  
+  progressContainer.style.display = 'block';
+  statusDiv.style.display = 'none';
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const progress = ((i + 1) / files.length) * 100;
+    
+    progressFill.style.width = progress + '%';
+    progressText.textContent = `Processing ${i + 1} of ${files.length}: ${file.name}`;
+    
+    if (file.type !== 'application/pdf') {
+      showStatus('error', `❌ ${file.name} is not a PDF file`);
+      continue;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      showStatus('error', `❌ ${file.name} is too large (max 10MB)`);
+      continue;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/admin/upload', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showStatus('success', `✅ ${file.name} uploaded! Added ${result.chunks_added} chunks from ${result.pages_processed} pages.`);
+        
+        // Check health status
+        if (result.kb_health === 'warning') {
+          showStatus('warning', `⚠️ Warning: Knowledge base is approaching capacity (${result.total_chunks} chunks)`);
+        }
+      } else {
+        showStatus('error', `❌ Failed to upload ${file.name}: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      showStatus('error', `❌ Upload failed for ${file.name}: ${error.message}`);
+    }
+  }
+
+  progressContainer.style.display = 'none';
+  fileInput.value = '';
+  
+  setTimeout(loadUploadedFiles, 1000);
+}
+
+function showStatus(type, message) {
+  const statusDiv = document.getElementById('uploadStatus');
+  statusDiv.className = `status ${type}`;
+  statusDiv.style.display = 'flex';
+  
+  const icon = type === 'success' ? 'fas fa-check-circle' : 
+               type === 'error' ? 'fas fa-exclamation-circle' : 
+               type === 'warning' ? 'fas fa-exclamation-triangle' :
+               'fas fa-info-circle';
+  
+  statusDiv.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
+  
+  if (type !== 'loading') {
+    setTimeout(() => {
+      statusDiv.style.display = 'none';
+    }, 5000);
+  }
+}
+
+// Load uploaded files
+async function loadUploadedFiles() {
+  try {
+    const response = await fetch('/admin/uploads', { credentials: 'same-origin' });
+    const files = await response.json();
+    
+    uploadedFiles = files;
+    renderPdfList(files);
+    updateStats();
+  } catch (error) {
+    console.error('Failed to load files:', error);
+  }
+}
+
+function renderPdfList(files) {
+  const listContainer = document.getElementById('pdfList');
+  
+  if (!files.length) {
+    listContainer.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-file-pdf"></i>
+        <p>No documents uploaded yet</p>
+      </div>
+    `;
+    return;
+  }
+
+  listContainer.innerHTML = files.map(file => {
+    const isLarge = file.pages > 100;
+    const sizeClass = isLarge ? 'large-file' : '';
+    
+    return `
+    <div class="pdf-item ${sizeClass}">
+      <div class="pdf-info">
+        <div class="pdf-icon">
+          <i class="fas fa-file-pdf"></i>
+        </div>
+        <div class="pdf-details">
+          <h4>${file.filename}</h4>
+          <div class="pdf-meta">
+            <span class="pdf-badge">
+              <i class="fas fa-puzzle-piece"></i> ${file.chunks} chunks
+            </span>
+            <span class="pdf-badge">
+              <i class="fas fa-file-lines"></i> ${file.pages || 'N/A'} pages
+            </span>
+            <span class="pdf-badge">
+              <i class="fas fa-weight-hanging"></i> ${file.file_size_mb || 'N/A'} MB
+            </span>
+            <span class="pdf-badge">
+              <i class="fas fa-calendar"></i> ${new Date(file.uploaded_at).toLocaleDateString()}
+            </span>
+            ${isLarge ? '<span class="pdf-badge" style="background: #fffbeb; color: #92400e;"><i class="fas fa-exclamation-triangle"></i> Large File</span>' : ''}
+          </div>
+        </div>
+      </div>
+      <div class="pdf-actions">
+        <button class="btn btn-sm btn-danger" onclick="deleteFile('${file.filename}')">
+          <i class="fas fa-trash"></i>
+          Delete
+        </button>
+      </div>
+    </div>
+  `}).join('');
+}
+
+async function updateStats() {
+  try {
+    const response = await fetch('/admin/stats', { credentials: 'same-origin' });
+    const stats = await response.json();
+    
+    document.getElementById('totalPdfs').textContent = stats.total_files;
+    document.getElementById('totalChunks').textContent = stats.total_chunks;
+    document.getElementById('totalSize').textContent = stats.total_size_mb + ' MB';
+    
+    const healthIcon = document.getElementById('healthIcon');
+    const healthStatus = document.getElementById('healthStatus');
+    const healthWarning = document.getElementById('healthWarning');
+    const healthWarningText = document.getElementById('healthWarningText');
+    
+    if (stats.kb_health === 'warning') {
+      healthIcon.className = 'stat-icon danger';
+      healthStatus.textContent = 'Warning';
+      healthWarning.style.display = 'flex';
+      healthWarningText.textContent = `You have ${stats.total_chunks} chunks out of ${stats.max_chunks} maximum. Consider deleting old documents.`;
+    } else {
+      healthIcon.className = 'stat-icon success';
+      healthStatus.textContent = 'Healthy';
+      healthWarning.style.display = 'none';
+    }
+  } catch (error) {
+    console.error('Failed to load stats:', error);
+  }
+}
+
+function filterDocuments() {
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  const filtered = uploadedFiles.filter(file => 
+    file.filename.toLowerCase().includes(search)
+  );
+  renderPdfList(filtered);
+}
+
+function sortDocuments() {
+  const sortValue = document.getElementById('sortSelect').value;
+  const [field, order] = sortValue.split('-');
+  
+  let sorted = [...uploadedFiles];
+  
+  if (field === 'name') {
+    sorted.sort((a, b) => a.filename.localeCompare(b.filename));
+  } else if (field === 'size') {
+    sorted.sort((a, b) => (a.file_size || 0) - (b.file_size || 0));
+  } else if (field === 'chunks') {
+    sorted.sort((a, b) => (a.chunks || 0) - (b.chunks || 0));
+  } else { // date
+    sorted.sort((a, b) => new Date(a.uploaded_at) - new Date(b.uploaded_at));
+  }
+  
+  if (order === 'desc') {
+    sorted.reverse();
+  }
+  
+  renderPdfList(sorted);
+}
+
+async function deleteFile(filename) {
+  if (!confirm(`Are you sure you want to delete "${filename}"?\n\nThis will remove all associated knowledge chunks and cannot be undone.`)) return;
+  
+  try {
+    showStatus('loading', '🗑️ Deleting file...');
+    
+    const response = await fetch(`/admin/delete/${encodeURIComponent(filename)}`, {
+      method: 'DELETE',
+      credentials: 'same-origin'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      showStatus('success', `✅ ${filename} deleted successfully! Removed ${result.chunks_removed} chunks.`);
+      loadUploadedFiles();
+    } else {
+      showStatus('error', `❌ Failed to delete: ${result.error}`);
+    }
+  } catch (error) {
+    showStatus('error', `❌ Delete failed: ${error.message}`);
+  }
+}
+
+function refreshData() {
+  loadUploadedFiles();
+  showStatus('success', '🔄 Data refreshed');
+}
+
+// Load data on page load
+loadUploadedFiles();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Oudience AI Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+<style>
+  :root{
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --secondary: #64748b;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --bg-light: #f8fafc;
+    --bg-white: #ffffff;
+    --bg-dark: #0f172a;
+    --card-dark: #1e293b;
+    --text-light: #1e293b;
+    --text-dark: #f1f5f9;
+    --border-light: #e2e8f0;
+    --border-dark: #334155;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  body.dark {
+    --bg-light: var(--bg-dark);
+    --bg-white: var(--card-dark);
+    --text-light: var(--text-dark);
+    --border-light: var(--border-dark);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-light);
+    color: var(--text-light);
+    transition: all 0.3s ease;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--bg-white);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow);
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-icon {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 1.1rem;
+  }
+
+  .btn-icon:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+  }
+
+  /* Chat Area */
+  .chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    scroll-behavior: smooth;
+  }
+
+  .message {
+    max-width: 80%;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    line-height: 1.6;
+    position: relative;
+    animation: slideIn 0.3s ease-out;
+    white-space: pre-wrap;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .message.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border-bottom-right-radius: 0.25rem;
+  }
+
+  .message.bot {
+    align-self: flex-start;
+    background: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-bottom-left-radius: 0.25rem;
+    position: relative;
+  }
+
+  .message.bot::before {
+    content: '';
+    position: absolute;
+    left: -0.5rem;
+    top: 1rem;
+    width: 0;
+    height: 0;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-right: 8px solid var(--bg-light);
+  }
+
+  .message-time {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .typing-indicator {
+    display: none;
+    align-self: flex-start;
+    background: var(--bg-light);
+    border: 1px solid var(--border-light);
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    border-bottom-left-radius: 0.25rem;
+  }
+
+  .typing-dots {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .typing-dots span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--secondary);
+    animation: typing 1.4s infinite ease-in-out;
+  }
+
+  .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+  @keyframes typing {
+    0%, 80%, 100% {
+      transform: scale(0);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Input Area */
+  .input-container {
+    padding: 1.5rem;
+    background: var(--bg-white);
+    border-top: 1px solid var(--border-light);
+  }
+
+  .input-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+    max-width: 100%;
+  }
+
+  .input-field {
+    flex: 1;
+    min-height: 48px;
+    max-height: 120px;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-light);
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--bg-white);
+    color: var(--text-light);
+    resize: none;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  .input-field:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+
+  .send-btn {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 1.1rem;
+  }
+
+  .send-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+  }
+
+  .send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Status Bar */
+  .status-bar {
+    padding: 0.5rem 1.5rem;
+    background: var(--bg-light);
+    border-top: 1px solid var(--border-light);
+    font-size: 0.875rem;
+    color: var(--secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+
+  /* Welcome Message */
+  .welcome-message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--secondary);
+  }
+
+  .welcome-message i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+  }
+
+  .welcome-message h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-light);
+  }
+
+  .welcome-message p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Example Questions */
+  .example-questions {
+    margin-top: 1.5rem;
+    text-align: left;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .example-questions h3 {
+    font-size: 0.875rem;
+    color: var(--secondary);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .example-category {
+    margin-bottom: 1rem;
+  }
+
+  .example-category-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+  }
+
+  .example-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+  }
+
+  .example-btn:hover {
+    background: var(--bg-light);
+    border-color: var(--primary);
+    transform: translateX(4px);
+  }
+
+  /* System Info Banner */
+  .system-info {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: #1e40af;
+  }
+
+  .system-info i {
+    font-size: 1.25rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .app {
+      height: 100vh;
+      max-width: 100%;
+    }
+    
+    .header {
+      padding: 1rem;
+    }
+    
+    .header h1 {
+      font-size: 1.25rem;
+    }
+    
+    .message {
+      max-width: 90%;
+    }
+    
+    .chat-messages {
+      padding: 1rem;
+    }
+    
+    .input-container {
+      padding: 1rem;
+    }
+
+    .example-questions {
+      padding: 0 1rem;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<div class="app">
+  <header class="header">
+    <h1>
+      <i class="fas fa-robot"></i>
+      Oudience AI Assistant
+    </h1>
+    <div class="header-controls">
+      <button onclick="showHelp()" class="btn-icon" title="Help & Examples">
+        <i class="fas fa-question-circle"></i>
+      </button>
+      <button onclick="clearChat()" class="btn-icon" title="Clear Chat">
+        <i class="fas fa-trash"></i>
+      </button>
+      <button onclick="toggleDark()" class="btn-icon" title="Toggle Theme">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="chat-container">
+    <div id="chatMessages" class="chat-messages">
+      <div class="welcome-message">
+        <i class="fas fa-comments"></i>
+        <h2>Welcome to Oudience AI Assistant</h2>
+        <p>I'm here to help you with company policies, procedures, and answer your questions. Feel free to ask me anything!</p>
+        
+        <div class="example-questions" id="exampleQuestions">
+          <h3>💡 Try asking:</h3>
+          <!-- Examples will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <div class="typing-indicator" id="typingIndicator">
+      <div class="typing-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-container">
+    <div class="input-wrapper">
+      <textarea 
+        id="messageInput" 
+        class="input-field" 
+        placeholder="Ask me anything about Oudience..."
+        rows="1"
+      ></textarea>
+      <button id="sendBtn" class="send-btn" title="Send Message">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-indicator">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Connecting...</span>
+    </div>
+    <div id="messageCount">0 messages</div>
+  </div>
+</div>
+
+<script>
+const messageInput = document.getElementById("messageInput");
+const chatMessages = document.getElementById("chatMessages");
+const sendBtn = document.getElementById("sendBtn");
+const typingIndicator = document.getElementById("typingIndicator");
+const messageCount = document.getElementById("messageCount");
+const statusText = document.getElementById("statusText");
+const statusDot = document.getElementById("statusDot");
+
+let messageCounter = 0;
+let systemInfo = null;
+
+// Load system info and examples
+async function loadSystemInfo() {
+  try {
+    const response = await fetch("/api/system-info");
+    systemInfo = await response.json();
+    
+    if (systemInfo.status === "online") {
+      statusText.textContent = `AI Assistant Online • ${systemInfo.total_documents} documents loaded`;
+      statusDot.style.background = "var(--success)";
+    }
+  } catch (error) {
+    statusText.textContent = "Connection Error";
+    statusDot.style.background = "var(--danger)";
+  }
+}
+
+async function loadExamples() {
+  try {
+    const response = await fetch("/api/example-questions");
+    const examples = await response.json();
+    
+    const container = document.getElementById("exampleQuestions");
+    let html = '<h3>💡 Try asking:</h3>';
+    
+    examples.forEach(category => {
+      html += `<div class="example-category">`;
+      html += `<div class="example-category-title">${category.category}</div>`;
+      category.questions.forEach(q => {
+        html += `<button class="example-btn" onclick="askQuestion('${q.replace(/'/g, "\\'")}')">${q}</button>`;
+      });
+      html += `</div>`;
+    });
+    
+    container.innerHTML = html;
+  } catch (error) {
+    console.error("Failed to load examples:", error);
+  }
+}
+
+function askQuestion(question) {
+  messageInput.value = question;
+  sendMessage();
+}
+
+function showHelp() {
+  const welcomeMsg = chatMessages.querySelector('.welcome-message');
+  if (welcomeMsg) {
+    welcomeMsg.scrollIntoView({ behavior: 'smooth' });
+  } else {
+    // Recreate welcome message
+    const helpDiv = document.createElement('div');
+    helpDiv.className = 'welcome-message';
+    helpDiv.innerHTML = `
+      <i class="fas fa-info-circle"></i>
+      <h2>How to Use Oudience AI Assistant</h2>
+      <p>Simply type your question about company policies, procedures, or general information. I'll search through our knowledge base to provide you with accurate answers.</p>
+      <div class="example-questions" id="helpExamples"></div>
+    `;
+    chatMessages.insertBefore(helpDiv, chatMessages.firstChild);
+    loadExamples();
+    helpDiv.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// Theme toggle
+function toggleDark() {
+  document.body.classList.toggle("dark");
+  const isDark = document.body.classList.contains("dark");
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+  
+  const icon = document.querySelector(".header-controls .btn-icon:nth-child(3) i");
+  icon.className = isDark ? "fas fa-sun" : "fas fa-moon";
+}
+
+// Load saved theme
+if (localStorage.getItem("theme") === "dark") {
+  document.body.classList.add("dark");
+  document.querySelector(".header-controls .btn-icon:nth-child(3) i").className = "fas fa-sun";
+}
+
+// Clear chat with confirmation
+function clearChat() {
+  if (messageCounter > 0) {
+    if (!confirm("Are you sure you want to clear the conversation?")) {
+      return;
+    }
+  }
+  
+  chatMessages.innerHTML = `
+    <div class="welcome-message">
+      <i class="fas fa-comments"></i>
+      <h2>Welcome to Oudience AI Assistant</h2>
+      <p>I'm here to help you with company policies, procedures, and answer your questions. Feel free to ask me anything!</p>
+      <div class="example-questions" id="exampleQuestions">
+        <h3>💡 Try asking:</h3>
+      </div>
+    </div>
+  `;
+  messageCounter = 0;
+  updateMessageCount();
+  loadExamples();
+}
+
+// Auto-resize textarea
+messageInput.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// Add message to chat
+function addMessage(text, isUser = false, responseTime = null) {
+  const welcomeMsg = chatMessages.querySelector('.welcome-message');
+  if (welcomeMsg) {
+    welcomeMsg.remove();
+  }
+
+  const messageDiv = document.createElement("div");
+  messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+  
+  const messageText = document.createElement("div");
+  messageText.textContent = text;
+  messageDiv.appendChild(messageText);
+
+  if (responseTime !== null) {
+    const timeDiv = document.createElement("div");
+    timeDiv.className = "message-time";
+    timeDiv.innerHTML = `<i class="fas fa-clock"></i> ${(responseTime/1000).toFixed(2)}s`;
+    messageDiv.appendChild(timeDiv);
+  }
+
+  chatMessages.appendChild(messageDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  messageCounter++;
+  updateMessageCount();
+}
+
+// Show/hide typing indicator
+function showTyping() {
+  typingIndicator.style.display = 'flex';
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function hideTyping() {
+  typingIndicator.style.display = 'none';
+}
+
+// Update message count
+function updateMessageCount() {
+  messageCount.textContent = `${messageCounter} message${messageCounter !== 1 ? 's' : ''}`;
+}
+
+// Send message
+async function sendMessage() {
+  const message = messageInput.value.trim();
+  if (!message) return;
+
+  // Disable input
+  messageInput.disabled = true;
+  sendBtn.disabled = true;
+  
+  // Add user message
+  addMessage(message, true);
+  messageInput.value = "";
+  messageInput.style.height = 'auto';
+
+  // Show typing indicator
+  showTyping();
+
+  const startTime = performance.now();
+  
+  try {
+    const response = await fetch("/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: message })
+    });
+    
+    const data = await response.json();
+    const endTime = performance.now();
+    const responseTime = Math.round(endTime - startTime);
+
+    hideTyping();
+    addMessage(data.response || "I couldn't process that request.", false, responseTime);
+    
+  } catch (error) {
+    hideTyping();
+    addMessage("Sorry, I'm having trouble connecting. Please try again or contact support if the issue persists.", false);
+  } finally {
+    // Re-enable input
+    messageInput.disabled = false;
+    sendBtn.disabled = false;
+    messageInput.focus();
+  }
+}
+
+// Event listeners
+sendBtn.addEventListener('click', sendMessage);
+
+messageInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// Initialize
+window.addEventListener('load', () => {
+  messageInput.focus();
+  loadSystemInfo();
+  loadExamples();
+});
+</script>
+
+</body>
+</html>

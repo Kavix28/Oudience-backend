@@ -26,10 +26,17 @@ Session(app)
 # =========================
 # Constants
 # =========================
-ADMIN_TOKEN = "admin123"
+ADMIN_TOKEN = os.getenv('ADMIN_TOKEN', 'change-me-in-production')  # Change this in production!
 UPLOAD_DIR = "uploads_exp"
 KB_FILE = "knowledge_base_exp.json"
 UPLOAD_LOGS = "upload_logs.json"
+
+# Performance & Scalability Settings
+MAX_FILE_SIZE_MB = 10
+MAX_TOTAL_CHUNKS = 10000  # Warning threshold
+CHUNK_SIZE = 250
+MIN_CHUNK_WORDS = 30
+BATCH_SIZE = 100  # For processing large KBs
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs("flask_sessions", exist_ok=True)
@@ -56,38 +63,73 @@ def save_json(path, data):
         json.dump(data, f, indent=2)
 
 def chunk_text(text, size=250):
+    """Split text into chunks with improved memory efficiency"""
     words = text.split()
-    return [
-        " ".join(words[i:i + size])
-        for i in range(0, len(words), size)
-        if len(words[i:i + size]) > 30
-    ]
+    chunks = []
+    for i in range(0, len(words), size):
+        chunk = " ".join(words[i:i + size])
+        if len(words[i:i + size]) > 30:
+            chunks.append(chunk)
+    return chunks
 
 def load_kb():
+    """Load knowledge base with improved error handling and memory management"""
     global kb_docs, kb_embeddings
-    kb_docs = load_json(KB_FILE)
     
-    # Handle nested array structure if present
-    if kb_docs and isinstance(kb_docs[0], list):
-        kb_docs = kb_docs[0]
-    
-    if not kb_docs:
-        kb_embeddings = None
-        return
+    try:
+        kb_docs = load_json(KB_FILE)
         
-    # Ensure kb_docs is a list of dictionaries
-    if not isinstance(kb_docs, list) or not all(isinstance(d, dict) and "text" in d for d in kb_docs):
-        print(f"Error: Invalid knowledge base format in {KB_FILE}")
+        # Handle nested array structure if present
+        if kb_docs and isinstance(kb_docs[0], list):
+            kb_docs = kb_docs[0]
+        
+        if not kb_docs:
+            kb_embeddings = None
+            print("ℹ️ Knowledge base is empty")
+            return
+            
+        # Ensure kb_docs is a list of dictionaries
+        if not isinstance(kb_docs, list) or not all(isinstance(d, dict) and "text" in d for d in kb_docs):
+            print(f"❌ Error: Invalid knowledge base format in {KB_FILE}")
+            kb_docs = []
+            kb_embeddings = None
+            return
+        
+        # Check if KB is getting too large
+        if len(kb_docs) > MAX_TOTAL_CHUNKS:
+            print(f"⚠️ Warning: Knowledge base has {len(kb_docs)} chunks (threshold: {MAX_TOTAL_CHUNKS})")
+        
+        # Generate embeddings with progress indication
+        print(f"🔄 Loading {len(kb_docs)} knowledge chunks...")
+        texts = [d["text"] for d in kb_docs]
+        
+        # Process in batches for large KBs
+        if len(texts) > BATCH_SIZE:
+            all_embeddings = []
+            for i in range(0, len(texts), BATCH_SIZE):
+                batch = texts[i:i + BATCH_SIZE]
+                batch_embeddings = embedder.encode(
+                    batch,
+                    convert_to_numpy=True,
+                    normalize_embeddings=True,
+                    show_progress_bar=False
+                )
+                all_embeddings.append(batch_embeddings)
+            kb_embeddings = np.vstack(all_embeddings)
+        else:
+            kb_embeddings = embedder.encode(
+                texts,
+                convert_to_numpy=True,
+                normalize_embeddings=True,
+                show_progress_bar=False
+            )
+        
+        print(f"✅ Knowledge base loaded successfully: {len(kb_docs)} chunks")
+        
+    except Exception as e:
+        print(f"❌ Error loading knowledge base: {str(e)}")
         kb_docs = []
         kb_embeddings = None
-        return
-        
-    texts = [d["text"] for d in kb_docs]
-    kb_embeddings = embedder.encode(
-        texts,
-        convert_to_numpy=True,
-        normalize_embeddings=True
-    )
 
 load_kb()
 
@@ -409,13 +451,13 @@ def admin_upload():
     if not file.filename.lower().endswith('.pdf'):
         return jsonify({"error": "Only PDF files are allowed"}), 400
 
-    # Check file size (10MB limit)
-    file.seek(0, 2)  # Seek to end
+    # Check file size
+    file.seek(0, 2)
     file_size = file.tell()
-    file.seek(0)  # Reset to beginning
+    file.seek(0)
     
-    if file_size > 10 * 1024 * 1024:  # 10MB
-        return jsonify({"error": "File too large. Maximum size is 10MB"}), 400
+    if file_size > MAX_FILE_SIZE_MB * 1024 * 1024:
+        return jsonify({"error": f"File too large. Maximum size is {MAX_FILE_SIZE_MB}MB"}), 400
 
     filename = secure_filename(file.filename)
     
@@ -433,23 +475,40 @@ def admin_upload():
     try:
         file.save(path)
 
-        # Extract text
+        # Extract text with page tracking
         text = ""
+        page_count = 0
         with pdfplumber.open(path) as pdf:
+            page_count = len(pdf.pages)
+            
+            # Warn if very large PDF
+            if page_count > 100:
+                print(f"⚠️ Large PDF detected: {page_count} pages")
+            
             for page_num, page in enumerate(pdf.pages):
                 page_text = page.extract_text()
                 if page_text:
                     text += f"[Page {page_num + 1}] {page_text}\n"
 
         if not text.strip():
-            os.remove(path)  # Clean up
+            os.remove(path)
             return jsonify({"error": "No text could be extracted from the PDF"}), 400
 
-        chunks = chunk_text(text)
+        chunks = chunk_text(text, CHUNK_SIZE)
         
         if not chunks:
-            os.remove(path)  # Clean up
+            os.remove(path)
             return jsonify({"error": "PDF content too short to create meaningful chunks"}), 400
+
+        # Check if adding these chunks would exceed limits
+        current_chunk_count = len(kb_docs)
+        new_total = current_chunk_count + len(chunks)
+        
+        if new_total > MAX_TOTAL_CHUNKS:
+            os.remove(path)
+            return jsonify({
+                "error": f"Adding this file would exceed the maximum chunk limit ({MAX_TOTAL_CHUNKS}). Current: {current_chunk_count}, Would add: {len(chunks)}. Please delete some documents first."
+            }), 400
 
         # Remove existing chunks from this file (handle re-uploads)
         global kb_docs
@@ -462,7 +521,7 @@ def admin_upload():
                 "id": start_id + i + 1,
                 "source": filename,
                 "text": chunk.strip(),
-                "page_info": "Multiple pages" if len(chunks) > 1 else "Single page"
+                "page_info": f"{page_count} pages"
             })
 
         # Save updated knowledge base
@@ -480,8 +539,9 @@ def admin_upload():
             "original_filename": original_filename,
             "chunks": len(chunks),
             "file_size": file_size,
-            "uploaded_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "pages_processed": len([p for p in text.split('[Page') if p.strip()])
+            "file_size_mb": round(file_size / (1024 * 1024), 2),
+            "pages": page_count,
+            "uploaded_at": time.strftime("%Y-%m-%d %H:%M:%S")
         })
         
         save_json(UPLOAD_LOGS, logs)
@@ -490,7 +550,9 @@ def admin_upload():
             "success": True,
             "chunks_added": len(chunks),
             "filename": filename,
-            "pages_processed": len([p for p in text.split('[Page') if p.strip()])
+            "pages_processed": page_count,
+            "total_chunks": len(kb_docs),
+            "kb_health": "healthy" if len(kb_docs) < MAX_TOTAL_CHUNKS else "warning"
         })
 
     except Exception as e:
@@ -504,12 +566,34 @@ def admin_uploads():
     require_admin()
     logs = load_json(UPLOAD_LOGS)
     
+    # Get query parameters for filtering/sorting
+    search = request.args.get('search', '').lower()
+    sort_by = request.args.get('sort', 'date')  # date, name, size, chunks
+    order = request.args.get('order', 'desc')  # asc, desc
+    
     # Add additional metadata
     for log in logs:
         file_path = os.path.join(UPLOAD_DIR, log["filename"])
         log["file_exists"] = os.path.exists(file_path)
-        if log["file_exists"]:
-            log["file_size_mb"] = round(os.path.getsize(file_path) / (1024 * 1024), 2)
+        if log["file_exists"] and "file_size" in log:
+            log["file_size_mb"] = round(log["file_size"] / (1024 * 1024), 2)
+    
+    # Filter by search
+    if search:
+        logs = [log for log in logs if search in log["filename"].lower()]
+    
+    # Sort
+    if sort_by == 'name':
+        logs.sort(key=lambda x: x["filename"].lower())
+    elif sort_by == 'size':
+        logs.sort(key=lambda x: x.get("file_size", 0))
+    elif sort_by == 'chunks':
+        logs.sort(key=lambda x: x.get("chunks", 0))
+    else:  # date
+        logs.sort(key=lambda x: x.get("uploaded_at", ""))
+    
+    if order == 'desc':
+        logs.reverse()
     
     return jsonify(logs)
 
@@ -566,8 +650,51 @@ def admin_stats():
         "total_files": total_files,
         "total_chunks": total_chunks,
         "total_size_mb": round(total_size / (1024 * 1024), 2),
-        "last_upload": logs[-1]["uploaded_at"] if logs else None
+        "last_upload": logs[-1]["uploaded_at"] if logs else None,
+        "kb_health": "healthy" if total_chunks < MAX_TOTAL_CHUNKS else "warning",
+        "max_chunks": MAX_TOTAL_CHUNKS
     })
+
+@app.route("/api/system-info")
+def system_info():
+    """Public endpoint for system status"""
+    return jsonify({
+        "status": "online",
+        "kb_loaded": kb_embeddings is not None,
+        "total_documents": len(set(d.get("source") for d in kb_docs)) if kb_docs else 0,
+        "total_chunks": len(kb_docs) if kb_docs else 0,
+        "version": "1.0.0"
+    })
+
+@app.route("/api/example-questions")
+def example_questions():
+    """Provide example questions for users"""
+    examples = [
+        {
+            "category": "Company Policies",
+            "questions": [
+                "What are the working hours?",
+                "Tell me about the leave policy",
+                "What is the remote work policy?"
+            ]
+        },
+        {
+            "category": "Office Information",
+            "questions": [
+                "Where are the office locations?",
+                "How many offices does Oudience have?"
+            ]
+        },
+        {
+            "category": "Workplace Culture",
+            "questions": [
+                "What are the company values?",
+                "Tell me about workplace culture",
+                "What is the code of conduct?"
+            ]
+        }
+    ]
+    return jsonify(examples)
 
 # =========================
 # Chat Endpoint (ENHANCED)
@@ -647,7 +774,21 @@ def query():
 # =========================
 @app.route("/")
 def index():
+    return send_from_directory("static", "index_enhanced.html")
+
+@app.route("/classic")
+def index_classic():
+    """Classic interface for backwards compatibility"""
     return send_from_directory("static", "index.html")
+
+@app.route("/admin")
+def admin_page():
+    return send_from_directory("static", "admin_enhanced.html")
+
+@app.route("/admin/classic")
+def admin_classic():
+    """Classic admin interface for backwards compatibility"""
+    return send_from_directory("static", "admin.html")
 
 # =========================
 # Run
